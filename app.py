@@ -4,7 +4,7 @@ from ebooklib import epub
 import re
 
 st.title("မြန်မာစာ PDF to EPUB ပြောင်းစက်")
-st.write("မြန်မာစာ စာလုံးထပ်နေခြင်းနှင့် ကွဲထွက်နေခြင်းများကို အပြည့်အဝ ရှင်းလင်းပေးသော ဗားရှင်း။")
+st.write("စာကြောင်းနှင့် အပိုဒ်များကို အပိုင်းလိုက် သေသေသပ်သပ် ခွဲထုတ်ပေးသော ဗားရှင်း။")
 
 uploaded_file = st.file_uploader("PDF ဖိုင်ကို ရွေးချယ်ပါ", type="pdf")
 
@@ -13,9 +13,9 @@ if uploaded_file is not None:
         f.write(uploaded_file.getbuffer())
     
     if st.button("EPUB သို့ ပြောင်းမည်"):
-        with st.spinner("မြန်မာစာ စာလုံးများကို စနစ်တကျ ပြင်ဆင်နေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
+        with st.spinner("စာအုပ်ကို စာကြောင်းနှင့် အပိုဒ်များအဖြစ် စနစ်တကျ ခွဲထုတ်နေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
             book = epub.EpubBook()
-            book.set_identifier('my_epub_004')
+            book.set_identifier('my_epub_006')
             book_title = uploaded_file.name.replace(".pdf", "")
             book.set_title(book_title)
             book.set_language('my')
@@ -25,20 +25,26 @@ if uploaded_file is not None:
             
             for page_num in range(len(doc)):
                 page = doc[page_num]
+                # စာမျက်နှာတစ်ခုချင်းစီမှ text ကို ရယူခြင်း (အကျဉ်း/အကျယ် ချိန်ညှိရန်)
                 text = page.get_text("text")
                 
-                # ၁။ မြန်မာစာလုံးများကြားရှိ မလိုအပ်သော နေရာလွတ်များကို ပေါင်းစပ်ခြင်း
-                for _ in range(3):
-                    text = re.sub(r'([\u1000-\u109F])\s+([\u1000-\u109F])', r'\1\2', text)
+                # စာကြောင်းတစ်ကြောင်းချင်းစီကို ခွဲထုတ်ခြင်း
+                lines = text.split('\n')
                 
-                # ၂။ ထပ်နေသော သဝေထိုး၊ လုံးကြီးတင်၊ ရေးချ၊ ဝစ္စပေါက် စသည်တို့ကို တစ်ခုတည်းဖြစ်အောင် ပြင်ဆင်ခြင်း
-                duplicate_signs = ['\u102c', '\u102d', '\u102e', '\u102f', '\u1030', '\u1031', '\u1032', '\u1036', '\u1037', '\u1038', '\u103a']
-                for sign in duplicate_signs:
-                    text = text.replace(sign + sign, sign)
-                    text = text.replace(sign + ' ' + sign, sign)
-                
-                cleaned_text = re.sub(r'\s+', ' ', text)
-                full_text += f"<p>{cleaned_text}</p><br>"
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        # ၁။ ထပ်နေသော နေရာလွတ်များကို ရှင်းလင်းခြင်း
+                        line = re.sub(r'[ \t]+', ' ', line)
+                        
+                        # ၂။ ထပ်နေသော သဝေထိုး၊ လုံးကြီးတင်၊ ရေးချ၊ ဝစ္စပေါက်များကို တစ်ခုတည်းဖြစ်အောင် ညှိခြင်း
+                        duplicate_signs = ['\u102c', '\u102d', '\u102e', '\u102f', '\u1030', '\u1031', '\u1032', '\u1036', '\u1037', '\u1038', '\u103a']
+                        for sign in duplicate_signs:
+                            line = line.replace(sign + sign, sign)
+                            line = line.replace(sign + ' ' + sign, sign)
+                        
+                        # စာကြောင်းတစ်ကြောင်းချင်းစီကို <p> 태그 သုံး၍ အပိုင်းလိုက် ခွဲထုတ်ခြင်း
+                        full_text += f"<p>{line}</p>\n"
             
             chapter = epub.EpubHtml(title=book_title, file_name='content.xhtml', lang='my')
             chapter.content = f'<html><head><meta charset="utf-8"/></head><body>{full_text}</body></html>'
