@@ -4,7 +4,7 @@ from ebooklib import epub
 import re
 
 st.title("မြန်မာစာ PDF to EPUB ပြောင်းစက်")
-st.write("မြန်မာစာ စာလုံးကွဲထွက်နေမှုကို အထူးပြုပြင်ပေးသော ဗားရှင်း။")
+st.write("မြန်မာစာ စာလုံးထပ်နေခြင်းနှင့် ကွဲထွက်နေခြင်းများကို အပြည့်အဝ ရှင်းလင်းပေးသော ဗားရှင်း။")
 
 uploaded_file = st.file_uploader("PDF ဖိုင်ကို ရွေးချယ်ပါ", type="pdf")
 
@@ -13,9 +13,9 @@ if uploaded_file is not None:
         f.write(uploaded_file.getbuffer())
     
     if st.button("EPUB သို့ ပြောင်းမည်"):
-        with st.spinner("မြန်မာစာ စာလုံးများကို ပုံစံမှန်ကန်အောင် ပြင်ဆင်နေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
+        with st.spinner("မြန်မာစာ စာလုံးများကို စနစ်တကျ ပြင်ဆင်နေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
             book = epub.EpubBook()
-            book.set_identifier('my_epub_003')
+            book.set_identifier('my_epub_004')
             book_title = uploaded_file.name.replace(".pdf", "")
             book.set_title(book_title)
             book.set_language('my')
@@ -27,9 +27,15 @@ if uploaded_file is not None:
                 page = doc[page_num]
                 text = page.get_text("text")
                 
-                # မြန်မာစာလုံးများကြားရှိ မလိုအပ်သော နေရာလွတ်များကို ဖယ်ရှားပြီး ပေါင်းစပ်ခြင်း
+                # ၁။ မြန်မာစာလုံးများကြားရှိ မလိုအပ်သော နေရာလွတ်များကို ပေါင်းစပ်ခြင်း
                 for _ in range(3):
                     text = re.sub(r'([\u1000-\u109F])\s+([\u1000-\u109F])', r'\1\2', text)
+                
+                # ၂။ ထပ်နေသော သဝေထိုး၊ လုံးကြီးတင်၊ ရေးချ၊ ဝစ္စပေါက် စသည်တို့ကို တစ်ခုတည်းဖြစ်အောင် ပြင်ဆင်ခြင်း
+                duplicate_signs = ['\u102c', '\u102d', '\u102e', '\u102f', '\u1030', '\u1031', '\u1032', '\u1036', '\u1037', '\u1038', '\u103a']
+                for sign in duplicate_signs:
+                    text = text.replace(sign + sign, sign)
+                    text = text.replace(sign + ' ' + sign, sign)
                 
                 cleaned_text = re.sub(r'\s+', ' ', text)
                 full_text += f"<p>{cleaned_text}</p><br>"
