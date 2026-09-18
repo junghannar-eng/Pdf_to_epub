@@ -4,7 +4,7 @@ from ebooklib import epub
 import re
 
 st.title("မြန်မာစာ PDF to EPUB ပြောင်းစက်")
-st.write("မြန်မာစာလုံး ကွဲထွက်နေခြင်းများကို ပြင်ဆင်ပေးသော ဗားရှင်း။")
+st.write("မြန်မာစာ စာလုံးကွဲထွက်နေမှုကို အထူးပြုပြင်ပေးသော ဗားရှင်း။")
 
 uploaded_file = st.file_uploader("PDF ဖိုင်ကို ရွေးချယ်ပါ", type="pdf")
 
@@ -15,7 +15,7 @@ if uploaded_file is not None:
     if st.button("EPUB သို့ ပြောင်းမည်"):
         with st.spinner("မြန်မာစာ စာလုံးများကို ပုံစံမှန်ကန်အောင် ပြင်ဆင်နေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
             book = epub.EpubBook()
-            book.set_identifier('my_epub_002')
+            book.set_identifier('my_epub_003')
             book_title = uploaded_file.name.replace(".pdf", "")
             book.set_title(book_title)
             book.set_language('my')
@@ -27,10 +27,11 @@ if uploaded_file is not None:
                 page = doc[page_num]
                 text = page.get_text("text")
                 
-                # မြန်မာစာ ကွဲထွက်နေသော နေရာလွတ်များကို ဖယ်ရှားခြင်း
-                # (ဥပမာ - စာလုံးကြားရှိ မလိုအပ်သော spaces များကို ရှင်းလူးခြင်း)
-                cleaned_text = re.sub(r'\s+', ' ', text)
+                # မြန်မာစာလုံးများကြားရှိ မလိုအပ်သော နေရာလွတ်များကို ဖယ်ရှားပြီး ပေါင်းစပ်ခြင်း
+                for _ in range(3):
+                    text = re.sub(r'([\u1000-\u109F])\s+([\u1000-\u109F])', r'\1\2', text)
                 
+                cleaned_text = re.sub(r'\s+', ' ', text)
                 full_text += f"<p>{cleaned_text}</p><br>"
             
             chapter = epub.EpubHtml(title=book_title, file_name='content.xhtml', lang='my')
