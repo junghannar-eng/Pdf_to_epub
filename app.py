@@ -1,9 +1,10 @@
 import streamlit as st
 import fitz  # PyMuPDF
 from ebooklib import epub
+import re
 
 st.title("မြန်မာစာ PDF to EPUB ပြောင်းစက်")
-st.write("စာမျက်နှာများ ပေါင်းစည်းပြီး စာဖတ်လို့ကောင်းမည့် EPUB အဖြစ် ပြောင်းပေးမည်။")
+st.write("မြန်မာစာလုံး ကွဲထွက်နေခြင်းများကို ပြင်ဆင်ပေးသော ဗားရှင်း။")
 
 uploaded_file = st.file_uploader("PDF ဖိုင်ကို ရွေးချယ်ပါ", type="pdf")
 
@@ -12,9 +13,9 @@ if uploaded_file is not None:
         f.write(uploaded_file.getbuffer())
     
     if st.button("EPUB သို့ ပြောင်းမည်"):
-        with st.spinner("စာအုပ်ကို ပုံစံမှန်ကန်စွာ ပြောင်းလဲနေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
+        with st.spinner("မြန်မာစာ စာလုံးများကို ပုံစံမှန်ကန်အောင် ပြင်ဆင်နေပါပြီ... ခေတ္တစောင့်ဆိုင်းပါ"):
             book = epub.EpubBook()
-            book.set_identifier('my_epub_001')
+            book.set_identifier('my_epub_002')
             book_title = uploaded_file.name.replace(".pdf", "")
             book.set_title(book_title)
             book.set_language('my')
@@ -22,15 +23,16 @@ if uploaded_file is not None:
             doc = fitz.open("temp.pdf")
             full_text = ""
             
-            # PDF တစ်ခုလုံးရှိ စာသားများကို စုစည်းခြင်း
             for page_num in range(len(doc)):
                 page = doc[page_num]
                 text = page.get_text("text")
-                # လိုင်းပြတ်နေသည်များကို ပုံမှန်ဖြစ်အောင် ပြင်ဆင်ခြင်း
-                cleaned_text = text.replace('\n', ' ')
+                
+                # မြန်မာစာ ကွဲထွက်နေသော နေရာလွတ်များကို ဖယ်ရှားခြင်း
+                # (ဥပမာ - စာလုံးကြားရှိ မလိုအပ်သော spaces များကို ရှင်းလူးခြင်း)
+                cleaned_text = re.sub(r'\s+', ' ', text)
+                
                 full_text += f"<p>{cleaned_text}</p><br>"
             
-            # တစ်အုပ်လုံးကို အခန်းတစ်ခန်းတည်းအနေဖြင့် ပုံစံထုတ်ခြင်း (စာမျက်နှာများ ရှုပ်မနေစေရန်)
             chapter = epub.EpubHtml(title=book_title, file_name='content.xhtml', lang='my')
             chapter.content = f'<html><head><meta charset="utf-8"/></head><body>{full_text}</body></html>'
             book.add_item(chapter)
