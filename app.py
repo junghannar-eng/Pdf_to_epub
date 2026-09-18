@@ -1,13 +1,24 @@
 import streamlit as st
 import fitz  # PyMuPDF
 from ebooklib import epub
-import pytesseract
-from PIL import Image
-import io
 import re
 
-st.title("မြန်မာစာ PDF to EPUB ပြောင်းစက် (OCR Version)")
-st.write("PDF ထဲတွင် စာလုံးများ ကွဲနေပါက OCR စနစ်ဖြင့် စာပုံရိပ်ကို တိုက်ရိုက်ဖတ်ယူ၍ EPUB ပြောင်းပေးပါမည်။")
+st.title("မြန်မာစာ PDF to EPUB ပြောင်းစက် (စာမျက်နှာအများကြီးအတွက်)")
+st.write("OCR မလိုအပ်ဘဲ စာမျက်နှာ ရာပေါင်းများစွာကို စက္ကန့်ပိုင်းအတွင်း မြန်ဆန်စွာ ပြောင်းပေးမည့် စနစ်။")
+
+def join_myanmar_broken_text(text):
+    # ဗျည်းနှင့် အသတ်/သရ/ယပင့်/ရရစ် ကြားထဲမှ ခြားနေသော Spaces များကို အလိုအလျောက် ပေါင်းစပ်ခြင်း
+    # အကြိမ်ကြိမ် စစ်ဆေး၍ စာလုံးများကို အမှန်အတိုင်း ပြန်ဆက်ပေးသည်
+    for _ in range(5):
+        text = re.sub(r'([\u1000-\u102a\u102b-\u103e\u103a])\s+([\u102b-\u103e\u103a\u103f])', r'\1\2', text)
+        text = re.sub(r'(\u1039)\s+([\u1000-\u1021])', r'\1\2', text)
+    
+    # ပိုနေသော Space များနှင့် အသတ်အညှပ် အပိုများကို ရှင်းထုတ်ခြင်း
+    text = re.sub(r'[ \t]+', ' ', text)
+    signs = ['\u102b', '\u102c', '\u102d', '\u102e', '\u102f', '\u1030', '\u1031', '\u1032', '\u1036', '\u1037', '\u1038', '\u103a']
+    for s in signs:
+        text = text.replace(s + s, s)
+    return text
 
 uploaded_file = st.file_uploader("PDF ဖိုင်ကို ရွေးချယ်ပါ", type="pdf")
 
@@ -16,9 +27,9 @@ if uploaded_file is not None:
         f.write(uploaded_file.getbuffer())
     
     if st.button("EPUB သို့ ပြောင်းမည်"):
-        with st.spinner("OCR စနစ်ဖြင့် မြန်မာစာများကို တစ်မျက်နှာချင်း ဖတ်ယူနေပါသည်... (ခေတ္တစောင့်ဆိုင်းပါ)"):
+        with st.spinner("စာအုပ်တစ်အုပ်လုံးကို မြန်ဆန်စွာ ပြောင်းလဲနေပါသည်..."):
             book = epub.EpubBook()
-            book.set_identifier('my_epub_ocr')
+            book.set_identifier('my_epub_fast')
             book_title = uploaded_file.name.replace(".pdf", "")
             book.set_title(book_title)
             book.set_language('my')
@@ -28,16 +39,12 @@ if uploaded_file is not None:
             
             for page_num in range(len(doc)):
                 page = doc[page_num]
+                text = page.get_text("text")
                 
-                # ၁။ စာမျက်နှာကို ရုပ်ပုံအဖြစ်ပြောင်းခြင်း (300 DPI)
-                pix = page.get_pixmap(dpi=300)
-                img = Image.open(io.BytesIO(pix.tobytes("png")))
+                # စာလုံး ကွဲနေသည်များကို ပြန်ဆက်ခြင်း
+                fixed_text = join_myanmar_broken_text(text)
                 
-                # ၂။ Tesseract OCR သုံးပြီး မြန်မာစာ စာသားကို တိုက်ရိုက်ဖတ်ယူခြင်း
-                text = pytesseract.image_to_string(img, lang='mya')
-                
-                # ၃။ ပိုပိုလိုလို စာကြောင်းရှင်းလင်းခြင်း
-                lines = text.split('\n')
+                lines = fixed_text.split('\n')
                 page_html = ""
                 for line in lines:
                     cleaned = line.strip()
@@ -45,9 +52,8 @@ if uploaded_file is not None:
                         page_html += f"{cleaned}<br/>\n"
                 
                 if page_html:
-                    full_text += f"<div style='margin-bottom: 1.5em;'>{page_html}</div>\n"
+                    full_text += f"<div style='margin-bottom: 1.2em;'>{page_html}</div>\n"
             
-            # EPUB ထုတ်လုပ်ခြင်း
             chapter = epub.EpubHtml(title=book_title, file_name='content.xhtml', lang='my')
             chapter.content = f"""
             <html>
@@ -70,7 +76,7 @@ if uploaded_file is not None:
             output_file = "output.epub"
             epub.write_epub(output_file, book, {})
             
-            st.success("OCR ပြောင်းလဲခြင်း ပြီးဆုံးပါပြီ!")
+            st.success("ပြောင်းလဲခြင်း အောင်မြင်စွာ ပြီးဆုံးပါပြီ!")
             with open(output_file, "rb") as f:
                 st.download_button(
                     label="EPUB ဖိုင် ဒေါင်းလုဒ်လုပ်ရန်",
